@@ -36,7 +36,7 @@ This directory contains simulated data and analysis scripts to recreate the simu
     - `analysis/ML.Rev` specifies power-posterior MCMC to estimate the marginal likelihood under the defined model
 * `jobs_X` contains complete `.Rev` scripts for performing the `RevBayes` analyses in S1.3 (comparing fossilized birth-death tree models) for each of the X taxon datasets
 
-# Marattiales
+# `Marattiales`
 
 This directory contains data and analysis scripts to recreate the empirical analysis described in our Supplementary Material section S2. The subdirectories contain the following files:
 * `src` contains scripts for simulating taxon datasets for posterior-predictive simulation
