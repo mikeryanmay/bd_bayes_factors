@@ -38,7 +38,7 @@ This directory contains simulated data and analysis scripts to recreate the simu
 
 # Marattiales
 
-This directory contains data and analysis scripts to recreate the empirical analysis described in our Supplementary Material section S1.4. The subdirectories contain the following files:
+This directory contains data and analysis scripts to recreate the empirical analysis described in our Supplementary Material section S2. The subdirectories contain the following files:
 * `src` contains scripts for simulating taxon datasets for posterior-predictive simulation
     - `simulate_div.R` simulates 50,000 taxon datasets under each model produced by the scripts described below; this script sources the remaining scripts in the `src` directory (which do nothing by themselves)
 * `data` contains empirical taxon and morphological datasets
@@ -51,4 +51,4 @@ This directory contains data and analysis scripts to recreate the empirical anal
     - `tree_models/` contains scripts that define the three tree models we used: `constant_rate.Rev` for a model with constant fossilization rates, `phi_variable.Rev` for a model with variable fossilization rates, and `RJ.Rev` for reversible-jump between those two models.
     - `analysis/MCMC.Rev` specifies standard MCMC under the defined model (for RJ analysis, also computes the BF between the two models)
     - `analysis/ML.Rev` specifies power-posterior MCMC to estimate the marginal likelihood under the defined model
-* `jobs` contains complete `.Rev` scripts for performing the `RevBayes` analyses in S1.4
+* `jobs` contains complete `.Rev` scripts for performing the `RevBayes` analyses in S2
