@@ -1,0 +1,47 @@
+# the rate of evolution
+r ~ dnLognormal(ln(0.002) - H * H * 0.5, H)
+moves[++mvi] = mvScale(r, weight=10)
+moves[tree_scale_move_index].addVariable(r, up=true)
+
+# the rate variation
+# s ~ dnExponential(abs(1.0 / H))
+# s ~ dnLognormal(ln(H) - H * H * 0.5, H)
+# moves[++mvi] = mvScale(s, weight=10)
+s <- 1.0
+
+# branch rates
+nb = 2 * ntax - 2
+for(i in 1:nb) {
+	branch_rates[i] ~ dnLognormal(ln(r) - s * s * 0.5, s)
+	moves[++mvi] = mvScale(branch_rates[i], weight=0.5)
+}
+
+# joint moves
+moves[tree_scale_move_index].addVariable(r, up=true)
+moves[tree_scale_move_index].addVariable(branch_rates, up=true)
+
+# moves[++mvi] = mvUpDownScale(weight=10)
+# moves[mvi].addVariable(r, up=true)
+# # moves[mvi].addVariable(s, up=true)
+# moves[mvi].addVariable(branch_rates, up=true)
+
+moves[++mvi] = mvRateAgeProposal(psi, weight=20, alpha=1, tune=false)
+moves[mvi].addRates(branch_rates)
+
+moves[++mvi] = mvRateAgeSubtreeProposal(psi, weight=10, alpha=1, tune=false)
+moves[mvi].addRates(branch_rates)
+
+moves[++mvi] = mvRootRatePulleyProposal(psi, weight=10, tune=false)
+moves[mvi].addRates(branch_rates)
+
+# the rate matrix
+gamma_var ~ dnExponential(0.1)
+moves[++mvi] = mvScale(gamma_var, weight=2)
+
+site_rates := fnDiscretizeGamma(1 / gamma_var, 1 / gamma_var, 4)
+
+Q <- fnJC(2)
+
+# the sequence model
+seq ~ dnPhyloCTMC(psi, Q, branchRates=branch_rates, siteRates=site_rates, type="Standard", coding="all")
+seq.clamp(data)

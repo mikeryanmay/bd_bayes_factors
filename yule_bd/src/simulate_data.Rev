@@ -1,0 +1,45 @@
+dataset    = 1:10
+ntaxa      = [8, 16, 32, 64]
+tree_model = ["bd"]
+seq_model  = ["JC"]
+
+# loop over tree models
+for(t in tree_model) {
+
+	# loop over sequence models
+	for(q in seq_model) {
+
+		# loop over tree sizes
+		for(n in ntaxa) {
+
+			# loop over datasets
+			for(d in dataset) {
+
+				# read the tree
+				tree = readTrees("data/" + t + "/" + q + "/n_" + n + "/dataset_" + d + "/tree.nex")[1]
+				
+				# simulate the data
+				r <- 3 / tree.treeLength()
+				
+				if (q == "JC") {
+					Q <- fnJC(4)
+				} else if (q == "F81") {
+					Q <- fnF81(simplex([0.2,0.25,0.35,0.2]))
+				}
+				
+				seq ~ dnPhyloCTMC(tree, Q, branchRates=r, nSites=100)
+				
+				# save the data
+				writeNexus(seq, "data/" + t + "/" + q + "/n_" + n + "/dataset_" + d + "/data.nex")
+
+			}
+
+		}
+
+
+	}
+
+}
+
+
+q()

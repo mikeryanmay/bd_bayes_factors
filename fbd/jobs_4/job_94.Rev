@@ -1,0 +1,7 @@
+analysis   = "MCMC"
+run_ID     = 4
+power      = 1
+dataset    = 4
+seq        = 8
+tree_model = "RJ"
+source("modules/template.Rev")

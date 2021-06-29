@@ -1,0 +1,148 @@
+# dataset variables
+# dataset: the tree index
+# seq: the simulated dataset index
+# power: the data-cloning power; 0 (no data), 0.1, 1, 10, 100, Inf (maximum likelihood tree), or 999 (true tree)
+
+# model variables
+# tree_model: the type of tree model to use; "one_rate", "two_rate", "RJ"
+
+# analysis variables
+# analysis: the type of analysis; "MCMC" or "ML"
+# run_ID: the run identifier; any number
+
+# analysis = "MCMC"
+# run_ID   = 1
+# 
+# power     = 1
+# dataset   = 1
+# seq       = 1
+# 
+# tree_model = "RJ"
+
+###########
+# helpers #
+###########
+
+# the H number
+H = ln(10) / (qnorm(0.975) - qnorm(0.025))
+
+# incrementers
+mvi = 0
+mni = 0
+
+# the output filename
+ofn = "output/dataset_" + dataset + "/p_" + power + "/seq_" + seq + "/tree_model_" + tree_model + "_" + analysis + "_run_" + run_ID
+
+#################
+# read the data #
+#################
+
+# the input filenames
+tree_fn = "data/dataset_" + dataset + "/tree.nex"
+taxa_fn = "data/dataset_" + dataset + "/taxa.tsv"
+data_fn = "data/dataset_" + dataset + "/seq_" + seq + "/data.nex"
+
+# read the tree
+if (power == 999) {
+	# read the true tree
+	tree = readTrees(tree_fn)[1]
+	fixed_tree = true
+} else if (power == Inf) {
+	# if we're using the infinite data limit,
+	# read the maximum likelihood tree
+	# TODO: read the maximum likelihood tree
+	fixed_tree = true
+} else {
+	# otherwise, read the true tree
+	# (we'll estimate the node ages later)
+	tree = readTrees(tree_fn)[1]
+	fixed_tree = false
+}
+
+# read the taxon data
+taxa = readTaxonData(taxa_fn)
+ntax = taxa.size()
+
+# read the sequence data
+if ( power > 0 & power != Inf & power != 999 ) {
+	# a finite dataset
+	data = readDiscreteCharacterData(data_fn)
+	has_data = true
+} else {
+	# no data
+	has_data = false
+}
+
+##########################
+# specify the tree model #
+##########################
+
+# source the tree model
+source("modules/tree_models/" + tree_model + ".Rev")
+
+# create the tree
+psi ~ dnSerialSampledBirthDeath(origin      = stem_age,
+                                lambda      = speciation_rate,
+                                mu          = extinction_rate,
+                                psi         = fossilization_rate,
+                                rho         = rho,
+                                lambdaTimes = breakpoints,
+                                muTimes     = breakpoints,
+								psiTimes    = breakpoints,
+                                taxa        = taxa,
+                                condition   = "time",
+								initialTree = tree)
+
+root_age := psi.rootAge()
+
+# create the tree moves
+if ( fixed_tree == false ) {	
+	
+	# moves on the nodes
+	moves[++mvi] = mvNodeTimeSlideUniform(psi, weight=20 * ntax)
+	moves[++mvi] = mvRootTimeSlideUniform(psi, stem_age, weight=0.5 * ntax)
+	# moves[++mvi] = mvSubtreeScale(psi, weight=ntax)
+	
+	# joint scale proposal on the tree
+	# tree_scale_move_index = ++mvi
+	# moves[tree_scale_move_index] = mvUpDownScale(weight=0.5 * ntax, tuneTarget=0.234, lambda=0.01, tune=true)
+	# moves[tree_scale_move_index] = mvUpDownScale(weight=0, tuneTarget=0.234, lambda=0.01, tune=true)
+	# moves[tree_scale_move_index].addVariable(psi, up=false)
+
+	# proposals on the fossils
+	# tips ~ dnUniformTipAges(psi)
+	# tips.clamp(taxa)
+	# moves[++mvi] = mvFossilTimeSlideUniform(psi, stem_age, weight=2 * psi.getFossils().size() )
+	moves[++mvi] = mvCollapseExpandFossilBranch(psi, stem_age, weight=5 * psi.getFossils().size())
+
+	num_sampled_ancestors := psi.numSampledAncestors()
+
+}
+
+##################################
+# specify the substitution model #
+##################################
+
+# only specify a substitution model if there is sequence data
+if (has_data == true) {
+
+	# source the substitution model
+	source("modules/sub_models/Mk.Rev")
+	
+	seq ~ dnPhyloCTMC(psi, Q, branchRates=r, type="Standard")
+	seq.clamp(data)
+
+	# include the rate in the tree-scale move
+	# moves[tree_scale_move_index].addVariable(r, up=true)
+	
+}
+
+####################
+# run the analysis #
+####################
+
+# source the analysis
+source("modules/analysis/" + analysis + ".Rev")
+
+# quit
+q()

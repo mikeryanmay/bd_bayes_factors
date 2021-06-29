@@ -1,0 +1,7 @@
+analysis   = "ML"
+run_ID     = 4
+power      = 1
+dataset    = 4
+seq        = 6
+tree_model = "two_rate"
+source("modules/template.Rev")

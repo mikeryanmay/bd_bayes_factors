@@ -1,0 +1,19 @@
+# net diversification rate
+p ~ dnBeta(2, 12)
+moves[++mvi] = mvBetaProbability(p, weight=10)
+
+net_div := abs(ln(1 / p))
+
+# extinction rate
+mu ~ dnReversibleJumpMixture(0, dnGamma(4, 2), 0.5)
+moves[++mvi] = mvRJSwitch(mu, weight=10)
+moves[++mvi] = mvScale(mu)
+
+# speciation rate
+lambda := net_div + mu
+
+# sampling probability
+rho <- 1.0
+
+# the RJ indicator
+is_bd := ifelse(mu == 0, 0, 1)

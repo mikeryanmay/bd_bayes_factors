@@ -1,0 +1,33 @@
+dataset = 1:10
+s       = 1:10
+
+for(d in dataset) {
+    
+    # read the tree
+    tree = readTrees("data/dataset_" + d + "/tree.nex")[1]
+    taxa = tree.taxa()
+
+    # simulate the data
+    r <- 1 / tree.treeLength()
+    Q <- fnJC(2)
+
+    for(i in s) {
+    
+        seq ~ dnPhyloCTMC(tree, Q, branchRates=r, nSites=100, type="Standard")
+
+        # remove sampled ancestors
+        # for(t in taxa) {
+        #     this_index = tree.tipIndex(t)
+        #     if( tree.branchLength(this_index) == 0.0 ) {
+        #         seq.removeTaxa( t.getName() )
+        #     }
+        # }
+
+        # save the data
+        writeNexus(seq, "data/dataset_" + d + "/seq_" + i + "/data.nex")
+        
+    }
+    
+}
+
+q()

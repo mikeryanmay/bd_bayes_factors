@@ -1,0 +1,10 @@
+analysis   = "MCMC"
+run_ID     = 2
+ntax       = 8
+power      = 1
+dataset    = 2
+true_tree  = "bd"
+true_sub   = "JC"
+tree_model = "RJ"
+sub_model  = "JC_strict"
+source("modules/template.Rev")

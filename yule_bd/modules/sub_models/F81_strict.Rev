@@ -1,0 +1,10 @@
+# the rate of evolution
+r ~ dnLognormal(ln(0.1), abs(2.0 * H))
+r.setValue(3 / tree.treeLength())
+moves[++mvi] = mvScale(r, weight=5)
+
+# the rate matrix
+pi ~ dnDirichlet([1,1,1,1])
+moves[++mvi] = mvBetaSimplex(pi)
+
+Q := fnF81(pi)

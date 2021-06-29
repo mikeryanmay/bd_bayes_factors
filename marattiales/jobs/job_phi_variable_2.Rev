@@ -1,0 +1,7 @@
+analysis   = "ML"
+run_ID     = 2
+power      = 1
+dataset    = 1
+true_tree  = "ingroup"
+tree_model = "phi_variable"
+source("modules/template_empirical.Rev")

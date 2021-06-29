@@ -1,0 +1,37 @@
+# specify the stem age
+stem_age <- 1
+
+breakpoints[1] <- stem_age * 0.5
+
+# specify the sampling fraction
+rho <- 1.0
+
+# diversification rates
+p ~ dnBeta(2, 12)
+moves[++mvi] = mvBetaProbability(p, weight=5)
+
+net_div := abs(ln(1 / p))
+
+mu ~ dnGamma(4, 2)
+moves[++mvi] = mvScale(mu, weight=5)
+
+# speciation rate
+lambda := net_div + mu
+
+speciation_rate := rep(lambda, 2)
+extinction_rate := rep(mu, 2)
+
+# fossilization rates
+fossilization_rate[1] ~ dnGamma(4, 2)
+moves[++mvi] = mvScale(fossilization_rate[1], weight=5)
+
+foss_rate_mult_dist = dnLognormal(ln(1) - H * H * 0.5, H)
+foss_rate_multiplier ~ dnReversibleJumpMixture(1, foss_rate_mult_dist, 0.5)
+moves[++mvi] = mvScale(foss_rate_multiplier, weight=5)
+moves[++mvi] = mvRJSwitch(foss_rate_multiplier, weight=5)
+
+fossilization_rate[2] := foss_rate_multiplier * fossilization_rate[1]
+
+phi_ratio := fossilization_rate[1] / fossilization_rate[2]
+
+is_variable := ifelse(foss_rate_multiplier == 1, 0, 1)

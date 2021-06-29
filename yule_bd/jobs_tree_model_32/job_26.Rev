@@ -1,0 +1,10 @@
+analysis   = "ML"
+run_ID     = 1
+ntax       = 32
+power      = 1
+dataset    = 9
+true_tree  = "bd"
+true_sub   = "JC"
+tree_model = "yule"
+sub_model  = "JC_strict"
+source("modules/template.Rev")

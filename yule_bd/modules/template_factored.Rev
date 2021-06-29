@@ -1,0 +1,125 @@
+# dataset variables
+# true_tree: the true tree-generating model; "yule" or "bd"
+# true_sub: the true sequence-generating model; "JC" or "F81"
+# ntax: the number of taxa; 8, 16, 32, 64
+# power: the data-cloning power; 0 (no data), 0.1, 1, 10, 100, Inf (maximum likelihood tree), or 999 (true tree)
+# dataset: the dataset identifier; any number
+
+# model variables
+# tree_model: the type of tree model to use; "yule", "bd", "RJ"
+# sub_model: the type of substitution model to use; "JC", "K80", "RJ"
+
+# analysis variables
+# analysis: the type of analysis; "MCMC" or "ML"
+# run_ID: the run identifier; any number
+
+# analysis = "MCMC"
+# run_ID   = 1
+# 
+# ntax      = 16
+# power     = 10
+# dataset   = 1
+# true_tree = "bd"
+# true_sub  = "JC"
+# 
+# tree_model = "RJ"
+# sub_model  = "JC_strict"
+
+###########
+# helpers #
+###########
+
+# the H number
+H = ln(10) / (qnorm(0.975) - qnorm(0.025))
+
+# incrementers
+mvi = 0
+mni = 0
+
+# the output filename
+ofn = "output_factored/" + true_tree + "/" + true_sub + "/n_" + ntax + "/p_" + power + "/dataset_" + dataset + "/tree_model_" + tree_model + "_sub_model_" + sub_model + "_" + analysis + "_run_" + run_ID
+
+#################
+# read the data #
+#################
+
+# the input filename
+ifn = "data/" + true_tree + "/" + true_sub + "/n_" + ntax + "/dataset_" + dataset
+
+# read the tree
+if (power == 999) {
+    # read the true tree
+    tree = readTrees(ifn + "/tree.nex")[1]
+    fixed_tree = true
+} else if (power == Inf) {
+    # if we're using the infinite data limit,
+    # read the maximum likelihood tree
+    # TODO: read the maximum likelihood tree
+    fixed_tree = true
+} else {
+    # otherwise, read the true tree
+    # (we'll estimate the node ages later)
+    tree = readTrees(ifn + "/tree.nex")[1]
+    fixed_tree = false
+}
+
+# get the taxa
+taxa = tree.taxa()
+ntax = taxa.size()
+nb   = 2 * ntax - 2
+
+# read the sequence data
+if ( power > 0 & power != Inf & power != 999 ) {
+    # a finite dataset
+    data = readDiscreteCharacterData(ifn + "/data.nex")
+    has_data = true
+} else {
+    # no data
+    has_data = false
+}
+
+##########################
+# specify the tree model #
+##########################
+
+# source the tree model
+source("modules/tree_models/" + tree_model + ".Rev")
+
+# create the number of taxa
+num ~ dnBDPNumTaxa(lambda = lambda, mu = mu, rootAge = tree.rootAge(), rho = rho, condition = "time")
+num.clamp(tree.ntips())
+
+# create the tree
+psi ~ dnBirthDeath(lambda = lambda, mu = mu, rootAge = tree.rootAge(), rho = rho, condition = "nTaxa", taxa = taxa)
+psi.setValue(tree)
+
+# create the tree moves
+if ( fixed_tree == false ) {    
+    moves[++mvi] = mvSubtreeScale(psi, weight=0.5 * ntax)
+    moves[++mvi] = mvNodeTimeSlideUniform(psi, weight=0.5 * ntax)    
+}
+
+##################################
+# specify the substitution model #
+##################################
+
+# only specify a substitution model if there is sequence data
+if (has_data == true) {
+
+    # source the substitution model
+    source("modules/sub_models/" + sub_model + ".Rev")
+    
+    seq ~ dnPhyloCTMC(psi, Q, branchRates=r)
+    seq.clamp(data)
+
+}
+
+####################
+# run the analysis #
+####################
+
+# source the analysis
+source("modules/analysis/" + analysis + ".Rev")
+
+# quit
+q()

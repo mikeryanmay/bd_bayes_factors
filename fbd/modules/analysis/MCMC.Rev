@@ -1,0 +1,44 @@
+# create the model
+my_model = model(psi)
+
+# create the monitors
+monitors[++mni] = mnScreen(printgen=1000)
+monitors[++mni] = mnModel(printgen=5, filename=ofn + "/params.log")
+
+# perform the MCMC analysis
+my_mcmc = mcmc(my_model, moves, monitors, likelihoodHeat = power)
+my_mcmc.burnin(1000, tuningInterval = 50)
+my_mcmc.operatorSummary()
+my_mcmc.run(500000)
+
+# read the trace
+trace = readTrace(ofn + "/params.log", burnin = 0)
+
+# find any RJ indicators
+tree_variable_found = false
+sub_variable_found = false
+for(i in 1:trace.size()) {
+	
+	# look for tree RJ
+	if (trace[i].getName() == "is_variable") {
+		tree_variable_found = true
+		tree_variable = trace[i].getValues()
+	}
+		
+}
+
+# calculate BF for tree RJ
+if ( tree_variable_found == true ) {
+	
+	# compute the model odds
+	posterior_probability = mean(tree_variable)
+	posterior_model_odds  = posterior_probability / (1 - posterior_probability)
+	prior_model_odds      = 1
+	
+	# compute the bayes factors
+	bayes_factor = 2 * ln( abs(posterior_model_odds / prior_model_odds) )
+	
+	# record the bayes factor
+	write(bayes_factor, filename = ofn + "/tree_RJ.txt")
+	
+}

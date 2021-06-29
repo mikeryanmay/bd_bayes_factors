@@ -1,0 +1,7 @@
+analysis   = "ML"
+run_ID     = 3
+power      = 1
+dataset    = 1
+true_tree  = "ingroup"
+tree_model = "constant_rate"
+source("modules/template_empirical.Rev")

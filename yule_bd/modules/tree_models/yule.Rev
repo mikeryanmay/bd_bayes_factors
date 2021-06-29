@@ -1,0 +1,11 @@
+# speciation rate
+p ~ dnBeta(2, 12)
+moves[++mvi] = mvBetaProbability(p, weight=10)
+
+lambda := abs(ln(1 / p))
+
+# extinction rate
+mu <- 0
+
+# sampling probability
+rho <- 1.0

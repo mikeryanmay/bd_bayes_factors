@@ -1,0 +1,10 @@
+# the rate of evolution
+r ~ dnLognormal(ln(0.5) - H * H * 0.5, H)
+
+"true rate: " + (3 / tree.treeLength())
+
+r.setValue(3 / tree.treeLength())
+moves[++mvi] = mvScale(r, weight=5)
+
+# the rate matrix
+Q <- fnJC(2)

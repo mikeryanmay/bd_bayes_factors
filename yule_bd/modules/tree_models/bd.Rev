@@ -1,0 +1,15 @@
+# net diversification rate
+p ~ dnBeta(2, 12)
+moves[++mvi] = mvBetaProbability(p, weight=10)
+
+net_div := abs(ln(1 / p))
+
+# extinction rate
+mu ~ dnGamma(4, 2)
+moves[++mvi] = mvScale(mu)
+
+# speciation rate
+lambda := net_div + mu
+
+# sampling probability
+rho <- 1.0

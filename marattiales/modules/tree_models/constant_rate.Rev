@@ -1,0 +1,47 @@
+# specify the stem age
+max_age = 0
+for(i in 1:taxa.size()) {
+    if( taxa[i].getMaxAge() > max_age ) {
+        max_age = taxa[i].getMaxAge()
+    }
+}
+
+stem_age ~ dnUniform(max_age, 419.2)
+moves[++mvi] = mvSlide(stem_age, weight=10)
+stem_age.setValue(tree.rootAge() + 1.0)
+
+# specify the sampling fraction
+rho <- 27.0 / 111.0
+
+# diversification rates
+div_prior = dnLognormal(ln(0.1), H)
+
+for(i in 1:(num_bins + 1)) {
+
+    # speciation rate
+    speciation_rate[i] ~ div_prior
+    moves[++mvi] = mvScale(speciation_rate[i], weight=5)
+    
+    # extinction rates
+    extinction_rate[i] ~ div_prior
+    moves[++mvi] = mvScale(extinction_rate[i], weight=5)
+
+}
+
+# fossilization rate
+phi_prior = dnLognormal(ln(0.005), abs(H))
+fossilization_rate[1] ~ phi_prior
+moves[++mvi] = mvScale(fossilization_rate[1], weight=5)
+
+for(i in 2:(num_bins + 1)) {
+    fossilization_rate[i] := fossilization_rate[1]
+}
+
+# track some rates
+net_div_rates := speciation_rate - extinction_rate
+
+# joint proposals
+moves[++mvi] = mvUpDownScale(weight=2)
+moves[mvi].addVariable(speciation_rate[1], up=true)
+moves[mvi].addVariable(extinction_rate[1], up=true)
+moves[mvi].addVariable(fossilization_rate[1], up=false)

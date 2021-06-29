@@ -1,0 +1,160 @@
+# dataset variables
+# true_tree: the true tree-generating model; "ingroup" or "standard"
+# power: the data-cloning power; 0 (no data), 0.1, 1, 10, 100, Inf (maximum likelihood tree), or 999 (true tree)
+# dataset: the dataset identifier; any number
+
+# model variables
+# tree_model: the type of tree model to use; "one_rate", "two_rate", "RJ"
+
+# analysis variables
+# analysis: the type of analysis; "MCMC" or "ML"
+# run_ID: the run identifier; any number
+
+# analysis = "MCMC"
+# run_ID   = 1
+# 
+# power     = 1
+# dataset   = 1
+# true_tree = "ingroup"
+# true_sub  = "Mk"
+# 
+# tree_model = "one_rate"
+
+###########
+# helpers #
+###########
+
+# the H number
+H = ln(10) / (qnorm(0.975) - qnorm(0.025))
+TWOH = abs(2 * H)
+
+# incrementers
+mvi = 0
+mni = 0
+
+# the output filename
+ofn = "output/tree_model_" + tree_model + "_" + analysis + "_run_" + run_ID
+
+#################
+# read the data #
+#################
+
+# the input filenames
+time_fn = "data/epochs.csv"
+tree_fn = "data/" + true_tree + "/tree.tre"
+taxa_fn = "data/" + true_tree + "/taxa.tsv"
+data_fn = "data/" + true_tree + "/data.nex"
+
+# read the epochs
+timescale = readDataDelimitedFile(file = time_fn, header = true, delimiter=",")
+num_bins  = timescale.size()
+for(i in 1:num_bins) {
+    breakpoints[num_bins + 1 - i] <- timescale[i][2]
+}
+
+# read the tree
+if (power == 999) {tree_fn
+    # read the true tree
+    tree = readTrees(tree_fn)[1]
+    fixed_tree = true
+} else if (power == Inf) {
+    # if we're using the infinite data limit,
+    # read the maximum likelihood tree
+    # TODO: read the maximum likelihood tree
+    fixed_tree = true
+} else {
+    # otherwise, read the true tree
+    # (we'll estimate the node ages later)
+    tree = readTrees(tree_fn)[1]
+    fixed_tree = false
+}
+
+# read the taxon data
+taxa = readTaxonData(taxa_fn)
+ntax = taxa.size()
+
+# read the sequence data
+if ( power > 0 & power != Inf & power != 999 ) {
+    # a finite dataset
+    data = readDiscreteCharacterData(data_fn)
+    has_data = true
+} else {
+    # no data
+    has_data = false
+}
+
+##########################
+# specify the tree model #
+##########################
+
+# source the tree model
+source("modules/tree_models/" + tree_model + ".Rev")
+
+# create the tree
+psi ~ dnSerialSampledBirthDeath(origin      = stem_age,
+                                lambda      = speciation_rate,
+                                mu          = extinction_rate,
+                                psi         = fossilization_rate,
+                                rho         = rho,
+                                lambdaTimes = breakpoints,
+                                muTimes     = breakpoints,
+                                psiTimes    = breakpoints,
+                                taxa        = taxa,
+                                condition   = "survival",
+                                initialTree = tree)
+
+root_age := psi.rootAge()
+
+# create the tree moves
+if ( fixed_tree == false ) {    
+    
+    # moves on the nodes
+    moves[++mvi] = mvNodeTimeSlideUniform(psi, weight=2.0 * ntax)
+    moves[++mvi] = mvRootTimeSlideUniform(psi, stem_age, weight=1.0 * ntax)
+    moves[++mvi] = mvSubtreeScale(psi, weight=ntax)
+    
+    # joint scale proposal on the tree
+    tree_scale_move_index = ++mvi
+    moves[tree_scale_move_index] = mvUpDownScale(weight=0.5 * ntax, tuneTarget=0.234, lambda=0.05, tune=false)
+    moves[tree_scale_move_index].addVariable(psi, up=false)
+
+    # also rescale the div rates
+    # moves[tree_scale_move_index].addVariable(speciation_rate[1], up=true)
+    # moves[tree_scale_move_index].addVariable(extinction_rate[1], up=true)    
+
+}
+
+# sample the tip ages
+tips ~ dnUniformTipAges(psi)
+tips.clamp(taxa)
+moves[++mvi] = mvFossilTimeSlideUniform(psi, stem_age, weight=psi.getFossils().size() )
+moves[++mvi] = mvCollapseExpandFossilBranch(psi, stem_age, weight=5 * psi.getFossils().size())
+
+num_sampled_ancestors := psi.numSampledAncestors()
+
+# prune fossils
+fossils = psi.getFossils()
+psi_extant := fnPruneTree(psi, prune=fossils)
+extant_age := psi_extant.rootAge()
+
+##################################
+# specify the substitution model #
+##################################
+
+# only specify a substitution model if there is sequence data
+if (has_data == true) {
+
+    # source the substitution model
+    source("modules/sub_models/Mk_G_relaxed.Rev")
+
+}
+
+####################
+# run the analysis #
+####################
+
+# source the analysis
+source("modules/analysis/" + analysis + ".Rev")
+
+# quit
+q()

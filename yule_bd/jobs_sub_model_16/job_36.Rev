@@ -1,0 +1,10 @@
+analysis   = "ML"
+run_ID     = 2
+ntax       = 16
+power      = 1
+dataset    = 2
+true_tree  = "bd"
+true_sub   = "JC"
+tree_model = "bd"
+sub_model  = "K80_strict"
+source("modules/template_sub.Rev")
